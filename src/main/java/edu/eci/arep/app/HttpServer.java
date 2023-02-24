@@ -1,8 +1,11 @@
 package edu.eci.arep.app;
 
+import javax.lang.model.type.TypeVariable;
+import javax.swing.plaf.metal.MetalToggleButtonUI;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.*;
 import java.io.*;
 import java.util.Objects;
@@ -31,13 +34,13 @@ public class HttpServer {
                     clientSocket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(
                     new InputStreamReader(clientSocket.getInputStream()));
-            String inputLine, outputLine;
+            Object inputLine, outputLine;
             Boolean firstLine = true;
             String request = "";
             while ((inputLine = in.readLine()) != null) {
                 if(firstLine){
                     firstLine = false;
-                    request = inputLine.split("HTTP")[0];
+                    request = ((String)inputLine).split("HTTP")[0];
                     request = request.split(" ")[1];
                 }
                 //System.out.println("Recibí: " + inputLine);
@@ -85,16 +88,83 @@ public class HttpServer {
         return res;
     }
 
+    private static String unaryInvoke(String clase, String metodo, String tipo, String valor){
+        metodo = metodo.replace("%20","");
+        tipo = tipo.replace("%20","");
+        valor = valor.replace("%20","");
+        valor = valor.replace("%22", "");
+        Object valor2;
+        System.out.println(valor);
+        String res = "";
+        try {
+            Class<?> parameter;
+            if (tipo.equals("String")){
+                parameter = String.class;
+                valor2 = valor;
+            }else if(tipo.equals("int")){
+                parameter = int.class;
+                valor2 = Integer.parseInt(valor);
+            }else{
+                parameter = double.class;
+                valor2 = Double.parseDouble(valor);
+            }
+            Class<?> c = Class.forName(clase);
+            Method m = c.getMethod(metodo, parameter);
+            res = m.invoke(null,valor2).toString();
+        } catch (ClassNotFoundException e) {
+            res = "Clase no encontrada";
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            res = "Error al invocar el metodo";
+        }
+        return res;
+    }
+
+    
+    private static String binaryInvoke(String clase, String metodo, String tipo1, String tipo2, String valor1, String valor2){
+        metodo = metodo.replace("%20","");
+        tipo1 = tipo1.replace("%20","");
+        valor1 = valor1.replace("%20","");
+        valor1 = valor1.replace("%22", "");
+
+        tipo2 = tipo2.replace("%20","");
+        valor2 = valor2.replace("%20","");
+        valor2 = valor2.replace("%22", "");
+        Object valor1Nuevo;
+        System.out.println(valor1);
+        String res = "";
+        try {
+            Class<?> parameter;
+            if (tipo1.equals("String")){
+                parameter = String.class;
+                valor1Nuevo = valor1;
+            }else if(tipo1.equals("int")){
+                parameter = int.class;
+                valor1Nuevo = Integer.parseInt(valor1);
+            }else{
+                parameter = double.class;
+                valor1Nuevo = Double.parseDouble(valor1);
+            }
+            Class<?> c = Class.forName(clase);
+            Method m = c.getMethod(metodo, parameter);
+            res = m.invoke(null,valor2).toString();
+        } catch (ClassNotFoundException e) {
+            res = "Clase no encontrada";
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            res = "Error al invocar el metodo";
+        }
+        return res;
+    }
+
     private static String invokeMethod(String clase, String metodo){
+        metodo = metodo.replace("%20","");
+
         System.out.println(clase + " "+metodo);
         String res = "";
         try {
             Class<?> c = Class.forName(clase);
-            Method[] methods = c.getMethods();
             Method m = c.getMethod(metodo);
             m.invoke(null);
             res = "Se invocó al metodo";
-
         } catch (ClassNotFoundException e) {
             res = "No se encontró la clase";
         } catch (NoSuchMethodException e) {
@@ -107,7 +177,7 @@ public class HttpServer {
         return res;
     }
 
-    private static String getQuery(String query){
+    private static Object getQuery(String query){
         String res = query.split("\\?")[1];
         res = res.split("=")[1];
 
@@ -120,6 +190,13 @@ public class HttpServer {
             String metodo = res.split(",")[1];
             res = invokeMethod(clase, metodo);
 
+        } else if (query.contains("unaryInvoke")){
+            res = (res.replace("unaryInvoke","")).replace("(","").replace(")","");
+            String clase = res.split(",")[0];
+            String metodo = res.split(",")[1];
+            String tipo = res.split(",")[2];
+            String valor = res.split(",")[3];
+            res = unaryInvoke(clase,metodo,tipo,valor);
         }
         return getHeader("text") + res;
     }
