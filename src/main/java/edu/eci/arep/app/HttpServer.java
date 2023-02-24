@@ -120,7 +120,7 @@ public class HttpServer {
     }
 
     
-    private static String binaryInvoke(String clase, String metodo, String tipo1, String tipo2, String valor1, String valor2){
+    private static String binaryInvoke(String clase, String metodo, String tipo1, String valor1, String tipo2, String valor2){
         metodo = metodo.replace("%20","");
         tipo1 = tipo1.replace("%20","");
         valor1 = valor1.replace("%20","");
@@ -130,23 +130,38 @@ public class HttpServer {
         valor2 = valor2.replace("%20","");
         valor2 = valor2.replace("%22", "");
         Object valor1Nuevo;
-        System.out.println(valor1);
+        Object valor2Nuevo;
+
         String res = "";
         try {
-            Class<?> parameter;
+            Class<?> parameter1, parameter2;
             if (tipo1.equals("String")){
-                parameter = String.class;
+                parameter1 = String.class;
                 valor1Nuevo = valor1;
             }else if(tipo1.equals("int")){
-                parameter = int.class;
+                parameter1 = int.class;
                 valor1Nuevo = Integer.parseInt(valor1);
             }else{
-                parameter = double.class;
+                parameter1 = double.class;
+                System.out.println(valor1);
                 valor1Nuevo = Double.parseDouble(valor1);
             }
+
+            if (tipo2.equals("String")){
+                parameter2 = String.class;
+                valor2Nuevo = valor2;
+            }else if(tipo2.equals("int")){
+                parameter2 = int.class;
+                valor2Nuevo = Integer.parseInt(valor2);
+            }else{
+                parameter2 = double.class;
+                valor2Nuevo = Double.parseDouble(valor2);
+            }
+            
             Class<?> c = Class.forName(clase);
-            Method m = c.getMethod(metodo, parameter);
-            res = m.invoke(null,valor2).toString();
+            Class<?>[] parametros = {parameter1,parameter2};
+            Method m = c.getMethod(metodo, parametros);
+            res = m.invoke(null,valor1Nuevo,valor2Nuevo).toString();
         } catch (ClassNotFoundException e) {
             res = "Clase no encontrada";
         } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
@@ -197,7 +212,16 @@ public class HttpServer {
             String tipo = res.split(",")[2];
             String valor = res.split(",")[3];
             res = unaryInvoke(clase,metodo,tipo,valor);
-        }
+        }else if (query.contains("binaryInvoke")){
+        res = (res.replace("binaryInvoke","")).replace("(","").replace(")","");
+        String clase = res.split(",")[0];
+        String metodo = res.split(",")[1];
+        String tipo1 = res.split(",")[2];
+        String tipo2 = res.split(",")[4];
+        String valor1 = res.split(",")[3];
+        String valor2 = res.split(",")[5];
+        res = binaryInvoke(clase,metodo,tipo1,valor1,tipo2,valor2);
+    }
         return getHeader("text") + res;
     }
 
